@@ -120,7 +120,6 @@ void loop() {
     getLocalTime(&timeinfo);
     // lv_msg_send(MSG_NEW_HOUR, &timeinfo.tm_hour);
     // lv_msg_send(MSG_NEW_MIN, &timeinfo.tm_min);
-    uint32_t volt = (analogRead(PIN_BAT_VOLT) * 2 * 3.3 * 1000) / 4096;
     // lv_msg_send(MSG_NEW_VOLT, &volt);
     last_tick = millis();
   }
