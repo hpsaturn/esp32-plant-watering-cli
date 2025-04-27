@@ -90,7 +90,7 @@ pumptest 105 10000
 
 ![esp32 plant watering](images/collage_hardware.jpg)
 
-Using this simple servo-controller and this pump from Aliexpress is enough for now.
+Using this simple servo-controller and this pump from Aliexpress is enough for now. For that you only need connect the motor wires of the old servo cotroller to the pump motor. And not more :D
 
 Possible compatible water pumps:
 
@@ -101,3 +101,7 @@ ESP32 tested:
 
 - [Freenove ESP32S3 WRover board](https://www.amazon.de/FREENOVE-ESP32-S3-WROOM-Dual-Core-Microcontroller-Wireless/dp/B0BMQ8F7FN)
 - [Freenove ESP32S3 WRover shield](https://www.amazon.de/-/en/Freenove-Breakout-ESP32-S3-Terminal-Outputs/dp/B0CD2512JV)
+
+## Demo
+
+[![ESP32S3 Plant Watering CLI video Demo](images/video_preview.jpg)](https://youtu.be/RiUBDuAdhD0)
