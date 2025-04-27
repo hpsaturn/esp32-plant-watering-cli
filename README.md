@@ -8,7 +8,9 @@ Scheduler and pump driver using a basic command line over an ESP32
 
 - [x] WiFi CLI Manager added
 - [x] Hardcoded scheduler
+- [x] Water pump enable via CLI
 - [x] Dynamic scheduler on memory
+- [x] Auto water pump via alarm
 - [ ] Dynamic scheduler on flash
 - [ ] Misture sensor via Bluetooth LE connection
 - [ ] Auto plant watering mode
@@ -72,7 +74,7 @@ nmcli status
 
 ### Remote access
 
-Change the next command using your IP addres of the board:
+Change the next command using your IP address of the board:
 
 ```shell
 telnet 192.168.178.91 11000
@@ -84,6 +86,12 @@ For instance, for a PWM of 105 and 10 seconds:
 
 ```shell
 pumptest 105 10000
+```
+
+### Add alarm
+
+```shell
+addalarm 20:30 "alarm name"
 ```
 
 ## Hardware
