@@ -6,6 +6,8 @@
 #include "esp_sntp.h"
 #include "time.h"
 #include <ESP32WifiCLI.hpp>
+#include <ESP32Servo.h>
+
 
 const char logo[] =
 "\033[0;32m╭──────────────────────╮\033[0m\r\n"
@@ -26,7 +28,6 @@ const char logo[] =
 ;
 
 OneButton button1(PIN_BUTTON_1, true);
-OneButton button2(PIN_BUTTON_2, true);
 
 const char * key_ntp_server = "kntpserver";
 const char * key_tzone = "ktzone";
@@ -37,6 +38,8 @@ const char * default_tzone = "CET-1CEST,M3.5.0,M10.5.0/3";
 
 bool wcli_setup_ready = false;
 
+Servo pumpServo;
+int servoPin = GPIO_NUM_21;
 class mESP32WifiCLICallbacks : public ESP32WifiCLICallbacks {
   void onWifiStatus(bool isConnected) {}
   void onHelpShow() {}
@@ -95,11 +98,21 @@ public:
 // Global alarm manager instance
 AlarmManager alarmManager;
 
-// Example callback function
+void enablePump(char *args, Stream *response) {
+  Pair<String, String> operands = wcli.parseCommand(args);
+  String angle = operands.first();
+  String time = operands.second();
+  pumpServo.attach(servoPin);
+  pumpServo.write(angle.toInt());
+  delay(time.toDouble());
+  pumpServo.write(10);
+  pumpServo.detach();
+}
+
+// Alarm callback function
 void alarmTriggered(const char* alarmName, const tm* timeinfo) {
-    Serial.printf("ALARM TRIGGERED [%02d:%02d]: %s\n", 
-                 timeinfo->tm_hour, timeinfo->tm_min, alarmName);
-    // Add your alarm actions here
+  Serial.printf("ALARM TRIGGERED [%02d:%02d]: %s\n", timeinfo->tm_hour, timeinfo->tm_min, alarmName);
+  enablePump("120 1000", nullptr);  // enable pump for 1 second
 }
 
 void updateTimeSettings() {
@@ -109,12 +122,6 @@ void updateTimeSettings() {
   configTime(GMT_OFFSET_SEC, DAY_LIGHT_OFFSET_SEC, server.c_str(), NTP_SERVER2);
   setenv("TZ", tzone.c_str(), 1);  
   tzset();
-
-  // Initialize alarm callback
-  alarmManager.setCallback(alarmTriggered);
-  // Add example alarms (modify as needed)
-  alarmManager.addDailyAlarm(7, 0, "Morning wake-up");
-  alarmManager.addDailyAlarm(12, 30, "Lunch time");
 }
 
 void setNTPServer(char *args, Stream *response) {
@@ -142,16 +149,16 @@ void setTimeZone(char *args, Stream *response) {
 void printLocalTime(char *args, Stream *response) {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) {
-    Serial.println("No time available (yet)");
+    response->println("No time available (yet)");
     return;
   }
-  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  response->println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 
-  Serial.println("----------------------------");
+  response->println("----------------------------");
 
   // Print alarm list
-  Serial.println("Configured Alarms:");
-  Serial.println("----------------------------");
+  response->println("Configured Alarms:");
+  response->println("----------------------------");
   
   bool foundNext = false;
   time_t now = mktime(&timeinfo);
@@ -182,17 +189,17 @@ void printLocalTime(char *args, Stream *response) {
       status = "✅ Passed today";
     }
 
-    Serial.printf("%02d:%02d - %-20s %s\n", 
+    response->printf("%02d:%02d - %-20s %s\r\n", 
                  alarm.hour, alarm.minute, 
                  alarm.name, 
                  status.c_str());
   }
   
   if (alarmManager.getAlarms().empty()) {
-    Serial.println("No alarms configured");
-    Serial.println("Use 'addalarm HH:MM \"Name\"' to add one");
+    response->println("No alarms configured");
+    response->println("Use 'addalarm HH:MM \"Name\"' to add one");
   }
-  Serial.println("----------------------------");
+  response->println("----------------------------");
 }
 
 // Add new CLI command for alarm management
@@ -203,14 +210,14 @@ void addAlarm(char *args, Stream *response) {
   
   int colonPos = timeStr.indexOf(':');
   if (colonPos == -1 || name.isEmpty()) {
-      Serial.println("Usage: addalarm HH:MM \"Alarm Name\"");
+      response->println("Usage: addalarm HH:MM \"Alarm Name\"");
       return;
   }
   
   int hour = timeStr.substring(0, colonPos).toInt();
   int minute = timeStr.substring(colonPos+1).toInt();
   alarmManager.addDailyAlarm(hour, minute, name.c_str());
-  Serial.printf("Added alarm: %02d:%02d - %s\n", hour, minute, name.c_str());
+  response->printf("Added alarm: %02d:%02d - %s\n", hour, minute, name.c_str());
 }
 
 void initRemoteShell(){
@@ -221,7 +228,7 @@ void initRemoteShell(){
 
 void setup() {
   Serial.begin(115200);
-  delay(1000);
+  delay(2000);
   
   button1.attachClick([]() { shutdown(); });
 
@@ -230,21 +237,36 @@ void setup() {
   wcli.setSilentMode(true);
   // NTP init
   updateTimeSettings();
+  // Initialize alarm callback
+  alarmManager.setCallback(alarmTriggered);
+  
+  // Add example alarms (modify as needed)
+  alarmManager.addDailyAlarm(8, 0, "Morning wakeup");
+  alarmManager.addDailyAlarm(20, 0, "Night shutdown");
+  alarmManager.addDailyAlarm(9, 40, "Test pump");
+
   // CLI config  
   wcli.add("ntpserver", &setNTPServer, "\tset NTP server. Default: pool.ntp.org");
   wcli.add("ntpzone", &setTimeZone, "\tset TZONE. https://tinyurl.com/4s44uyzn");
   wcli.add("time", &printLocalTime, "\t\tprint the current time");
   wcli.add("reboot", &reboot, "\tbasil plant reboot");
+  wcli.add("pumptest", &enablePump, "\t<PWM> <time (ms)> enable pump servo");
   wcli.add("addalarm", &addAlarm, "\tadd alarm in HH:MM \"Name\" format");
   wcli_setup_ready = wcli.isConfigured();
   wcli.begin("basil_plant");
   initRemoteShell();
   alarmManager.setCallback(alarmTriggered);
+
+  // Allow allocation of all timers
+	ESP32PWM::allocateTimer(0);
+	ESP32PWM::allocateTimer(1);
+	ESP32PWM::allocateTimer(2);
+	ESP32PWM::allocateTimer(3);
+  pumpServo.attach(servoPin);
 }
 
 void loop() {
   button1.tick();
-  // button2.tick();
   delay(3);
   static uint32_t last_tick;
   if (millis() - last_tick > 60000) {
