@@ -42,11 +42,62 @@ reboot: 	basil plant reboot
 time: 		print the current time
 ```
 
+## Usage
+
+Please install first [PlatformIO](http://platformio.org/) open source ecosystem for IoT development compatible with **Arduino** IDE and its command line tools (Windows, MacOs and Linux). Also, you may need to install [git](http://git-scm.com/) in your system. After install that you should have the command line tools of PlatformIO. Please test it with `pio --help`. Then please run the next command for build and upload the firmware:
+
+```bash
+pio run --target upload
+```
+
+### Configure WiFi
+
+Full WiFi manager commands:
+
+```shell
+nmcli help
+```
+
+Quick connection:
+
+```shell
+nmcli connect your_ssid password "your_passw"
+```
+
+Check connection:
+
+```shell
+nmcli status
+```
+
+### Remote access
+
+Change the next command using your IP addres of the board:
+
+```shell
+telnet 192.168.178.91 11000
+```
+
+### Pump test
+
+For instance, for a PWM of 105 and 10 seconds:
+
+```shell
+pumptest 105 10000
+```
+
 ## Hardware
 
 ![esp32 plant watering](images/collage_hardware.jpg)
 
-Using a simple servo controller and this pump from Aliexpress is enough for now. Possible compatible water pump:
+Using this simple servo-controller and this pump from Aliexpress is enough for now.
+
+Possible compatible water pumps:
 
 - [Micro M20 Water Pump DC 3.7-5V](https://s.click.aliexpress.com/e/_okmECet)
 - [Micro Mini 20mm 130 Motor Vacuum Air Pump DC 3V](https://s.click.aliexpress.com/e/_omedpXf)
+
+ESP32 tested:
+
+- [Freenove ESP32S3 WRover board](https://www.amazon.de/FREENOVE-ESP32-S3-WROOM-Dual-Core-Microcontroller-Wireless/dp/B0BMQ8F7FN)
+- [Freenove ESP32S3 WRover shield](https://www.amazon.de/-/en/Freenove-Breakout-ESP32-S3-Terminal-Outputs/dp/B0CD2512JV)
