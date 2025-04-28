@@ -11,6 +11,7 @@ Scheduler and pump driver using a basic command line over an ESP32
 - [x] Water pump enable via CLI
 - [x] Dynamic scheduler on memory
 - [x] Auto water pump via alarm
+- [ ] OTA support
 - [ ] Dynamic scheduler on flash
 - [ ] Moisture sensor via Bluetooth LE connection
 - [ ] Auto plant watering mode

@@ -60,6 +60,10 @@ void alarmTriggered(const char* alarmName, const tm* timeinfo) {
   enablePump((char *) "120 15000", &Serial);  // enable pump for 15 second
 }
 
+void testPump() {
+  enablePump((char *) "120 15000", &Serial);
+}
+
 void updateTimeSettings() {
   String server = wcli.getString(key_ntp_server, default_server );
   String tzone = wcli.getString(key_tzone, default_tzone);
@@ -141,7 +145,7 @@ void printLocalTime(char *args, Stream *response) {
   
   if (alarmManager.getAlarms().empty()) {
     response->println("No alarms configured");
-    response->println("Use 'addalarm HH:MM \"Name\"' to add one");
+    response->println("Use 'addalarm HH:MM Name' to add one");
   }
   response->println("----------------------------");
 }
@@ -184,11 +188,13 @@ void initRemoteShell(){
   #endif
 }
 
+
+
 void setup() {
   Serial.begin(115200);
   delay(2000);
   
-  button1.attachClick([]() { shutdown(); });
+  button1.attachClick([]() { testPump(); });
 
   wcli.setCallback(new mESP32WifiCLICallbacks());
   wcli.shell->attachLogo(logo);
@@ -206,14 +212,13 @@ void setup() {
   // CLI config  
   wcli.add("ntpserver", &setNTPServer, "\tset NTP server. Default: pool.ntp.org");
   wcli.add("ntpzone", &setTimeZone, "\tset TZONE. https://tinyurl.com/4s44uyzn");
-  wcli.add("time", &printLocalTime, "\t\tprint the current time");
+  wcli.add("time", &printLocalTime, "\t\tprint the current time and alarms");
   wcli.add("reboot", &reboot, "\tbasil plant reboot");
   wcli.add("pumptest", &enablePump, "\t<PWM> <time (ms)> enable pump servo");
-  wcli.add("addalarm", &addAlarm, "\tadd alarm in \"HH:MM Name\" format");
+  wcli.add("addalarm", &addAlarm, "\t<HH:MM> <Alarm Name> add alarm");
   wcli_setup_ready = wcli.isConfigured();
   wcli.begin("basil_plant");
   initRemoteShell();
-  alarmManager.setCallback(alarmTriggered);
 
   // Allow allocation of all timers
 	ESP32PWM::allocateTimer(0);
@@ -225,9 +230,9 @@ void setup() {
 
 void loop() {
   button1.tick();
-  delay(3);
+  delay(5);
   static uint32_t last_tick;
-  if (millis() - last_tick > 60000) {
+  if (millis() - last_tick > 1000) {
     struct tm timeinfo;
     getLocalTime(&timeinfo);
     alarmManager.checkAlarms(&timeinfo);
