@@ -1,8 +1,8 @@
 # ESP32 Plant Watering CLI
 
-Scheduler and pump driver using a basic command line over an ESP32
+***Basil Plant*** is a scheduler and pump driver using a basic command line over an ESP32, for now. (in development)
 
-![esp32 plant watering collage](images/collage.jpg)
+![esp32 Basil Plant Watering collage](images/collage.jpg)
 
 ## TODO
 
@@ -121,6 +121,14 @@ If you need update the firmware via OTA, you only need add in your host firewall
 
 ```bash
 pio run -e ota --target upload
+```
+
+### Clock setup
+
+This project use NTP for sync the ESP32 clock. Via CLI you are able to setup your time zone. For instance to set Tokio time zone, select the correct time zone code [here](https://raw.githubusercontent.com/nayarsystems/posix_tz_db/master/zones.csv) and set it using this command:
+
+```bash
+ntpzone JST-9
 ```
 
 ## Hardware
