@@ -53,6 +53,34 @@ Please install first [PlatformIO](http://platformio.org/) open source ecosystem 
 pio run --target upload
 ```
 
+### Pump test
+
+For instance, for a PWM of 105 and 10 seconds:
+
+```shell
+pumptest 105 10000
+```
+
+Also is configured in the **boot button** a pump test with these parametes.
+
+### Add alarm
+
+The format is "HH:MM name", for instance for setup an alarm for `Night watering` at `21:30`, you need:
+
+```shell
+addalarm 21:30 Night watering
+```
+
+### Alarm status
+
+To list all alarms and the current time, use this command:
+
+```shell
+time
+```
+
+![ESP32 Plant Watering CLI](images/cli_alarm_status.jpg)
+
 ### Configure WiFi
 
 Full WiFi manager commands:
@@ -81,27 +109,19 @@ From your PC, access to the plant, changing in the next command and put your IP 
 telnet 192.168.178.91 11000
 ```
 
-### Pump test
-
-For instance, for a PWM of 105 and 10 seconds:
+or maybe should works:
 
 ```shell
-pumptest 105 10000
+telnet basil_plant.local 11000
 ```
 
-### Add alarm
+#### OTA update
 
-```shell
-addalarm 20:30 Alarm Name
+If you need update the firmware via OTA, you only need add in your host firewall permissions for the port 8123 and then perform an OTA update using VSCode `env:ota` or via command line:
+
+```bash
+pio run -e ota --target upload
 ```
-
-### Alarm status
-
-```shell
-time
-```
-
-![ESP32 Plant Watering CLI](images/cli_alarm_status.jpg)
 
 ## Hardware
 
