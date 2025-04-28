@@ -207,7 +207,7 @@ void setup() {
   // Add example alarms (modify as needed)
   alarmManager.addDailyAlarm(8, 0, "Morning wakeup");
   alarmManager.addDailyAlarm(11, 0, "Morning watering");
-  alarmManager.addDailyAlarm(20, 0, "Night shutdown");
+  alarmManager.addDailyAlarm(23, 17, "Night shutdown");
 
   // CLI config
   wcli.add("ntpserver", &setNTPServer, "\tset NTP server. Default: pool.ntp.org");
@@ -227,7 +227,6 @@ void setup() {
   ESP32PWM::allocateTimer(1);
   ESP32PWM::allocateTimer(2);
   ESP32PWM::allocateTimer(3);
-  pumpServo.attach(servoPin);
 }
 
 void loop() {
