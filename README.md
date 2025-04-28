@@ -72,9 +72,9 @@ Check connection:
 nmcli status
 ```
 
-### Remote access
+#### Remote access
 
-Change the next command using your IP address of the board:
+From your PC, access to the plant, changing in the next command and put your IP address of your board that show the status command, like this:
 
 ```shell
 telnet 192.168.178.91 11000
@@ -93,6 +93,14 @@ pumptest 105 10000
 ```shell
 addalarm 20:30 "alarm name"
 ```
+
+### Alarm status
+
+```shell
+time
+```
+
+![ESP32 Plant Watering CLI](images/cli_alarm_status.jpg)
 
 ## Hardware
 
