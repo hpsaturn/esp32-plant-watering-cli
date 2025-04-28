@@ -36,13 +36,13 @@ End    : Jumps the cursor to the end of the line.
 
 ---- Available commands ----
 
-addalarm: 	add alarm in "HH:MM Name" format
+addalarm: 	<HH:MM> <Alarm Name> add alarm
 nmcli: 		network manager CLI. Type nmcli help for more info
 ntpserver: 	set NTP server. Default: pool.ntp.org
 ntpzone: 	set TZONE. https://tinyurl.com/4s44uyzn
 pumptest: 	<PWM> <time (ms)> enable pump servo
 reboot: 	basil plant reboot
-time: 		print the current time
+time: 		print the current time and alarms
 ```
 
 ## Usage
