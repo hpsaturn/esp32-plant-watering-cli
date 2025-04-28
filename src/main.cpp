@@ -4,28 +4,13 @@
 #include "pin_config.h"
 #include "power.h"
 #include "esp_sntp.h"
-#include "time.h"
+#include "alarm_manager.h"
+#include "logo.h"
 #include <ESP32WifiCLI.hpp>
 #include <ESP32Servo.h>
-#include <vector>
 
-const char logo[] =
-"\033[0;32m╭──────────────────────╮\033[0m\r\n"
-"\033[0;32m│       🌱 BASIL       │\033[0m\r\n"
-"\033[0;32m│      _               │\033[0m\r\n"
-"\033[0;32m│     / \\              │\033[0m\r\n"
-"\033[0;32m│    / o \\   Fresh &   │\033[0m\r\n"
-"\033[0;32m│   /_____\\   Green    │\033[0m\r\n"
-"\033[0;32m│     |@|              │\033[0m\r\n"
-"\033[0;32m│    / | \\             │\033[0m\r\n"
-"\033[0;32m╰──────────────────────╯\033[0m\r\n"
-"\033[0;32m╭──────────────────────╮\033[0m\r\n"
-"\033[0;32m│  \033[1;33mBasil Plant CLI \u2122\033[0m   \033[0;32m│\r\n"
-"\033[0;32m│  \033[1;33mVersion: 0.0.1\033[0m      \033[0;32m│\r\n"
-"\033[0;32m│  \033[1;33m@hpsaturn\033[0m           \033[0;32m│\r\n"
-"\033[0;32m│  \033[1;33m2025\033[0m                \033[0;32m│\r\n"
-"\033[0;32m╰──────────────────────╯\033[0m\r\n"
-;
+// Global alarm manager instance
+AlarmManager alarmManager;
 
 OneButton button1(PIN_BUTTON_1, true);
 
@@ -40,61 +25,12 @@ bool wcli_setup_ready = false;
 
 Servo pumpServo;
 int servoPin = GPIO_NUM_21;
+
 class mESP32WifiCLICallbacks : public ESP32WifiCLICallbacks {
   void onWifiStatus(bool isConnected) {}
   void onHelpShow() {}
   void onNewWifi(String ssid, String passw) { wcli_setup_ready = wcli.isConfigured(); }
 };
-
-// Alarm callback function type
-typedef void (*AlarmCallback)(const char* alarmName, const tm* timeinfo);
-
-class AlarmManager {
-private:
-    struct Alarm {
-        int hour;
-        int minute;
-        const char* name;
-        bool triggered;
-    };
-    std::vector<Alarm> alarms;
-    AlarmCallback callback = nullptr;
-    
-public:
-    void addDailyAlarm(int hour, int minute, const char* name) {
-        alarms.push_back({hour, minute, name, false});
-    }
-
-    void setCallback(AlarmCallback cb) {
-        callback = cb;
-    }
-
-    // Get all alarms (const reference)
-    const std::vector<Alarm>& getAlarms() const {
-      return alarms;
-    }
-
-    void checkAlarms(const tm* timeinfo) {
-        for (auto& alarm : alarms) {
-            if (!alarm.triggered && 
-                timeinfo->tm_hour == alarm.hour && 
-                timeinfo->tm_min == alarm.minute) {
-                
-                alarm.triggered = true;
-                if (callback) {
-                    callback(alarm.name, timeinfo);
-                }
-            } 
-            // Reset trigger at midnight
-            else if (timeinfo->tm_hour == 0 && timeinfo->tm_min == 0) {
-                alarm.triggered = false;
-            }
-        }
-    }
-};
-
-// Global alarm manager instance
-AlarmManager alarmManager;
 
 void enablePump(char *args, Stream *response) {
   Pair<String, String> operands = wcli.parseCommand(args);
@@ -111,7 +47,7 @@ void enablePump(char *args, Stream *response) {
 // Alarm callback function
 void alarmTriggered(const char* alarmName, const tm* timeinfo) {
   Serial.printf("\r\nALARM TRIGGERED [%02d:%02d]: %s\r\n", timeinfo->tm_hour, timeinfo->tm_min, alarmName);
-  enablePump((char *) "120 15000", &Serial);  // enable pump for 10 second
+  enablePump((char *) "120 15000", &Serial);  // enable pump for 15 second
 }
 
 void updateTimeSettings() {
@@ -152,7 +88,6 @@ void printLocalTime(char *args, Stream *response) {
     return;
   }
   response->println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
-
   response->println("----------------------------");
 
   // Print alarm list
