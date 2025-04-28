@@ -8,28 +8,30 @@
  * @license GPL3
  */
 
+#include <ESP32Servo.h>
+#include <ESP32WifiCLI.hpp>
+#include <OTAHandler.h>
+
 #include "Arduino.h"
 #include "OneButton.h"
 #include "WiFi.h"
+#include "alarm_manager.h"
+#include "esp_sntp.h"
+#include "logo.h"
 #include "pin_config.h"
 #include "power.h"
-#include "esp_sntp.h"
-#include "alarm_manager.h"
-#include "logo.h"
-#include <ESP32WifiCLI.hpp>
-#include <ESP32Servo.h>
 
 // Global alarm manager instance
 AlarmManager alarmManager;
 
 OneButton button1(PIN_BUTTON_1, true);
 
-const char * key_ntp_server = "kntpserver";
-const char * key_tzone = "ktzone";
+const char *key_ntp_server = "kntpserver";
+const char *key_tzone = "ktzone";
 
 // change these params via CLI:
-const char * default_server = "pool.ntp.org";  
-const char * default_tzone = "CET-1CEST,M3.5.0,M10.5.0/3";
+const char *default_server = "pool.ntp.org";
+const char *default_tzone = "CET-1CEST,M3.5.0,M10.5.0/3";
 
 bool wcli_setup_ready = false;
 
@@ -55,21 +57,20 @@ void enablePump(char *args, Stream *response) {
 }
 
 // Alarm callback function
-void alarmTriggered(const char* alarmName, const tm* timeinfo) {
-  Serial.printf("\r\nALARM TRIGGERED [%02d:%02d]: %s\r\n", timeinfo->tm_hour, timeinfo->tm_min, alarmName);
-  enablePump((char *) "120 15000", &Serial);  // enable pump for 15 second
+void alarmTriggered(const char *alarmName, const tm *timeinfo) {
+  Serial.printf("\r\nALARM TRIGGERED [%02d:%02d]: %s\r\n", timeinfo->tm_hour, timeinfo->tm_min,
+                alarmName);
+  enablePump((char *)"120 15000", &Serial);  // enable pump for 15 second
 }
 
-void testPump() {
-  enablePump((char *) "120 15000", &Serial);
-}
+void testPump() { enablePump((char *)"120 15000", &Serial); }
 
 void updateTimeSettings() {
-  String server = wcli.getString(key_ntp_server, default_server );
+  String server = wcli.getString(key_ntp_server, default_server);
   String tzone = wcli.getString(key_tzone, default_tzone);
-  Serial.printf("ntp server: \t%s\r\ntimezone: \t%s\r\n",server.c_str(),tzone.c_str());
+  Serial.printf("ntp server: \t%s\r\ntimezone: \t%s\r\n", server.c_str(), tzone.c_str());
   configTime(GMT_OFFSET_SEC, DAY_LIGHT_OFFSET_SEC, server.c_str(), NTP_SERVER2);
-  setenv("TZ", tzone.c_str(), 1);  
+  setenv("TZ", tzone.c_str(), 1);
   tzset();
 }
 
@@ -107,18 +108,18 @@ void printLocalTime(char *args, Stream *response) {
   // Print alarm list
   response->println("Configured Alarms:");
   response->println("----------------------------");
-  
+
   bool foundNext = false;
   time_t now = mktime(&timeinfo);
-  
-  for (const auto& alarm : alarmManager.getAlarms()) {
+
+  for (const auto &alarm : alarmManager.getAlarms()) {
     // Create tm struct for alarm time today
     struct tm alarmTime = timeinfo;
     alarmTime.tm_hour = alarm.hour;
     alarmTime.tm_min = alarm.minute;
     alarmTime.tm_sec = 0;
     time_t alarmToday = mktime(&alarmTime);
-    
+
     // Calculate time difference
     double diff = difftime(alarmToday, now);
     int hoursRemaining = static_cast<int>(diff) / 3600;
@@ -137,12 +138,10 @@ void printLocalTime(char *args, Stream *response) {
       status = "✅ Passed today";
     }
 
-    response->printf("%02d:%02d - %-20s %s\r\n", 
-                 alarm.hour, alarm.minute, 
-                 alarm.name, 
-                 status.c_str());
+    response->printf("%02d:%02d - %-20s %s\r\n", alarm.hour, alarm.minute, alarm.name,
+                     status.c_str());
   }
-  
+
   if (alarmManager.getAlarms().empty()) {
     response->println("No alarms configured");
     response->println("Use 'addalarm HH:MM Name' to add one");
@@ -155,15 +154,15 @@ void addAlarm(char *args, Stream *response) {
   Pair<String, String> operands = wcli.parseCommand(args);
   String timeStr = operands.first();
   String name = operands.second();
-  
+
   int colonPos = timeStr.indexOf(':');
   if (colonPos == -1 || name.isEmpty()) {
-      response->println("Usage: addalarm HH:MM Alarm Name");
-      return;
+    response->println("Usage: addalarm HH:MM Alarm Name");
+    return;
   }
-  
+
   int hour = timeStr.substring(0, colonPos).toInt();
-  int minute = timeStr.substring(colonPos+1).toInt();
+  int minute = timeStr.substring(colonPos + 1).toInt();
 
   // Validate time range
   if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
@@ -182,18 +181,19 @@ void addAlarm(char *args, Stream *response) {
   response->printf("Added alarm: %02d:%02d - %s\r\n", hour, minute, safeName);
 }
 
-void initRemoteShell(){
-  #ifndef DISABLE_CLI_TELNET 
-    if (wcli.isTelnetRunning()) wcli.shellTelnet->attachLogo(logo);
-  #endif
+void enableOTA() {
+  ota.setup("basil_plant", "basil_plant");
+  ota.setOnUpdateMessageCb([](const char *msg) { Serial.println(msg); });
 }
 
-
+void initRemoteShell() {
+#ifndef DISABLE_CLI_TELNET
+  if (wcli.isTelnetRunning()) wcli.shellTelnet->attachLogo(logo);
+#endif
+}
 
 void setup() {
   Serial.begin(115200);
-  delay(2000);
-  
   button1.attachClick([]() { testPump(); });
 
   wcli.setCallback(new mESP32WifiCLICallbacks());
@@ -203,13 +203,13 @@ void setup() {
   updateTimeSettings();
   // Initialize alarm callback
   alarmManager.setCallback(alarmTriggered);
-  
+
   // Add example alarms (modify as needed)
   alarmManager.addDailyAlarm(8, 0, "Morning wakeup");
   alarmManager.addDailyAlarm(11, 0, "Morning watering");
   alarmManager.addDailyAlarm(20, 0, "Night shutdown");
 
-  // CLI config  
+  // CLI config
   wcli.add("ntpserver", &setNTPServer, "\tset NTP server. Default: pool.ntp.org");
   wcli.add("ntpzone", &setTimeZone, "\tset TZONE. https://tinyurl.com/4s44uyzn");
   wcli.add("time", &printLocalTime, "\t\tprint the current time and alarms");
@@ -220,17 +220,20 @@ void setup() {
   wcli.begin("basil_plant");
   initRemoteShell();
 
+  if (wcli_setup_ready) enableOTA();
+
   // Allow allocation of all timers
-	ESP32PWM::allocateTimer(0);
-	ESP32PWM::allocateTimer(1);
-	ESP32PWM::allocateTimer(2);
-	ESP32PWM::allocateTimer(3);
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+  ESP32PWM::allocateTimer(2);
+  ESP32PWM::allocateTimer(3);
   pumpServo.attach(servoPin);
 }
 
 void loop() {
+  ota.loop();
   button1.tick();
-  delay(5);
+  delay(3);
   static uint32_t last_tick;
   if (millis() - last_tick > 1000) {
     struct tm timeinfo;
@@ -238,6 +241,5 @@ void loop() {
     alarmManager.checkAlarms(&timeinfo);
     last_tick = millis();
   }
-  while(!wcli_setup_ready) wcli.loop(); // only for fist setup
   wcli.loop();
 }
