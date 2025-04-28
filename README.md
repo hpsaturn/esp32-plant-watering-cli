@@ -35,7 +35,7 @@ End    : Jumps the cursor to the end of the line.
 
 ---- Available commands ----
 
-addalarm: 	add alarm in HH:MM "Name" format
+addalarm: 	add alarm in "HH:MM Name" format
 nmcli: 		network manager CLI. Type nmcli help for more info
 ntpserver: 	set NTP server. Default: pool.ntp.org
 ntpzone: 	set TZONE. https://tinyurl.com/4s44uyzn
@@ -91,7 +91,7 @@ pumptest 105 10000
 ### Add alarm
 
 ```shell
-addalarm 20:30 "alarm name"
+addalarm 20:30 Alarm Name
 ```
 
 ### Alarm status

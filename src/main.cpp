@@ -1,3 +1,13 @@
+/**
+ * @file main.cpp
+ * @author Antonio Vanegas @hpsaturn
+ * @date April 2025
+ * @brief Basil Plant CLI - Water Pump Controller
+ * @details This program controls a water pump for a plant using an ESP32 microcontroller.
+ * @link https://github.com/hpsaturn/esp32-plant-watering-cli @endlink
+ * @license GPL3
+ */
+
 #include "Arduino.h"
 #include "OneButton.h"
 #include "WiFi.h"
@@ -144,14 +154,28 @@ void addAlarm(char *args, Stream *response) {
   
   int colonPos = timeStr.indexOf(':');
   if (colonPos == -1 || name.isEmpty()) {
-      response->println("Usage: addalarm HH:MM \"Alarm Name\"");
+      response->println("Usage: addalarm HH:MM Alarm Name");
       return;
   }
   
   int hour = timeStr.substring(0, colonPos).toInt();
   int minute = timeStr.substring(colonPos+1).toInt();
-  alarmManager.addDailyAlarm(hour, minute, name.c_str());
-  response->printf("Added alarm: %02d:%02d - %s\r\n", hour, minute, name.c_str());
+
+  // Validate time range
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+    response->println("Error: Invalid time format (use HH:MM, 00-23:00-59)");
+    return;
+  }
+
+  // Create safe copy of the name
+  const size_t MAX_NAME_LENGTH = 32;
+  char safeName[MAX_NAME_LENGTH] = {0};
+  size_t copyLength = min(name.length(), MAX_NAME_LENGTH - 1);
+  memcpy(safeName, name.c_str(), copyLength);
+  safeName[copyLength] = '\0';  // Ensure null-termination
+
+  alarmManager.addDailyAlarm(hour, minute, safeName);
+  response->printf("Added alarm: %02d:%02d - %s\r\n", hour, minute, safeName);
 }
 
 void initRemoteShell(){
@@ -185,7 +209,7 @@ void setup() {
   wcli.add("time", &printLocalTime, "\t\tprint the current time");
   wcli.add("reboot", &reboot, "\tbasil plant reboot");
   wcli.add("pumptest", &enablePump, "\t<PWM> <time (ms)> enable pump servo");
-  wcli.add("addalarm", &addAlarm, "\tadd alarm in HH:MM \"Name\" format");
+  wcli.add("addalarm", &addAlarm, "\tadd alarm in \"HH:MM Name\" format");
   wcli_setup_ready = wcli.isConfigured();
   wcli.begin("basil_plant");
   initRemoteShell();
