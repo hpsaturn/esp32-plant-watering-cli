@@ -9,8 +9,8 @@
  */
 
 #include <ESP32Servo.h>
-
 #include <ESP32WifiCLI.hpp>
+#include <OTAHandler.h>
 
 #include "Arduino.h"
 #include "OneButton.h"
@@ -181,6 +181,11 @@ void addAlarm(char *args, Stream *response) {
   response->printf("Added alarm: %02d:%02d - %s\r\n", hour, minute, safeName);
 }
 
+void enableOTA() {
+  ota.setup("basil_plant", "basil_plant");
+  ota.setOnUpdateMessageCb([](const char *msg) { Serial.println(msg); });
+}
+
 void initRemoteShell() {
 #ifndef DISABLE_CLI_TELNET
   if (wcli.isTelnetRunning()) wcli.shellTelnet->attachLogo(logo);
@@ -189,8 +194,6 @@ void initRemoteShell() {
 
 void setup() {
   Serial.begin(115200);
-  delay(2000);
-
   button1.attachClick([]() { testPump(); });
 
   wcli.setCallback(new mESP32WifiCLICallbacks());
@@ -217,6 +220,8 @@ void setup() {
   wcli.begin("basil_plant");
   initRemoteShell();
 
+  if (wcli_setup_ready) enableOTA();
+
   // Allow allocation of all timers
   ESP32PWM::allocateTimer(0);
   ESP32PWM::allocateTimer(1);
@@ -226,8 +231,9 @@ void setup() {
 }
 
 void loop() {
+  ota.loop();
   button1.tick();
-  delay(5);
+  delay(3);
   static uint32_t last_tick;
   if (millis() - last_tick > 1000) {
     struct tm timeinfo;
@@ -235,6 +241,5 @@ void loop() {
     alarmManager.checkAlarms(&timeinfo);
     last_tick = millis();
   }
-  while (!wcli_setup_ready) wcli.loop();  // only for fist setup
   wcli.loop();
 }
