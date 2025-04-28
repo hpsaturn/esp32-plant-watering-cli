@@ -7,7 +7,7 @@
 #include "time.h"
 #include <ESP32WifiCLI.hpp>
 #include <ESP32Servo.h>
-
+#include <vector>
 
 const char logo[] =
 "\033[0;32m╭──────────────────────╮\033[0m\r\n"
@@ -45,8 +45,6 @@ class mESP32WifiCLICallbacks : public ESP32WifiCLICallbacks {
   void onHelpShow() {}
   void onNewWifi(String ssid, String passw) { wcli_setup_ready = wcli.isConfigured(); }
 };
-
-#include <vector>
 
 // Alarm callback function type
 typedef void (*AlarmCallback)(const char* alarmName, const tm* timeinfo);
@@ -102,6 +100,7 @@ void enablePump(char *args, Stream *response) {
   Pair<String, String> operands = wcli.parseCommand(args);
   String angle = operands.first();
   String time = operands.second();
+  response->printf("Pump enabled for %s PWM for %s ms\r\n", angle.c_str(), time.c_str());
   pumpServo.attach(servoPin);
   pumpServo.write(angle.toInt());
   delay(time.toDouble());
@@ -111,8 +110,8 @@ void enablePump(char *args, Stream *response) {
 
 // Alarm callback function
 void alarmTriggered(const char* alarmName, const tm* timeinfo) {
-  Serial.printf("ALARM TRIGGERED [%02d:%02d]: %s\n", timeinfo->tm_hour, timeinfo->tm_min, alarmName);
-  enablePump("120 1000", nullptr);  // enable pump for 1 second
+  Serial.printf("\r\nALARM TRIGGERED [%02d:%02d]: %s\r\n", timeinfo->tm_hour, timeinfo->tm_min, alarmName);
+  enablePump((char *) "120 15000", &Serial);  // enable pump for 10 second
 }
 
 void updateTimeSettings() {
@@ -217,7 +216,7 @@ void addAlarm(char *args, Stream *response) {
   int hour = timeStr.substring(0, colonPos).toInt();
   int minute = timeStr.substring(colonPos+1).toInt();
   alarmManager.addDailyAlarm(hour, minute, name.c_str());
-  response->printf("Added alarm: %02d:%02d - %s\n", hour, minute, name.c_str());
+  response->printf("Added alarm: %02d:%02d - %s\r\n", hour, minute, name.c_str());
 }
 
 void initRemoteShell(){
@@ -242,8 +241,8 @@ void setup() {
   
   // Add example alarms (modify as needed)
   alarmManager.addDailyAlarm(8, 0, "Morning wakeup");
+  alarmManager.addDailyAlarm(11, 0, "Morning watering");
   alarmManager.addDailyAlarm(20, 0, "Night shutdown");
-  alarmManager.addDailyAlarm(9, 40, "Test pump");
 
   // CLI config  
   wcli.add("ntpserver", &setNTPServer, "\tset NTP server. Default: pool.ntp.org");

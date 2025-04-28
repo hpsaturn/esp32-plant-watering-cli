@@ -12,7 +12,7 @@ Scheduler and pump driver using a basic command line over an ESP32
 - [x] Dynamic scheduler on memory
 - [x] Auto water pump via alarm
 - [ ] Dynamic scheduler on flash
-- [ ] Misture sensor via Bluetooth LE connection
+- [ ] Moisture sensor via Bluetooth LE connection
 - [ ] Auto plant watering mode
 
 ## Commands
@@ -102,8 +102,8 @@ Using this simple servo-controller and this pump from Aliexpress is enough for n
 
 Possible compatible water pumps:
 
+- [Micro Water Pump DC 3V 5V Mini](https://s.click.aliexpress.com/e/_onhAe0V)
 - [Micro M20 Water Pump DC 3.7-5V](https://s.click.aliexpress.com/e/_okmECet)
-- [Micro Mini 20mm 130 Motor Vacuum Air Pump DC 3V](https://s.click.aliexpress.com/e/_omedpXf)
 
 ESP32 tested:
 
