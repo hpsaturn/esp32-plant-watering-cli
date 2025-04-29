@@ -1,6 +1,6 @@
 # ESP32 Plant Watering CLI
 
-***Basil Plant*** is a scheduler and pump driver using a basic command line over an ESP32, for now. (in development)
+Scheduler and pump driver using a basic command line over an ESP32, for now.
 
 ![esp32 Basil Plant Watering collage](images/collage.jpg)
 
