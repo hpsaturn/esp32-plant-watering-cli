@@ -18,7 +18,7 @@
 #include "alarm_manager.h"
 #include "esp_sntp.h"
 #include "logo.h"
-#include "pin_config.h"
+#include "app_config.h"
 #include "power.h"
 
 // Global alarm manager instance
@@ -28,10 +28,6 @@ OneButton button1(PIN_BUTTON_1, true);
 
 const char *key_ntp_server = "kntpserver";
 const char *key_tzone = "ktzone";
-
-// change these params via CLI:
-const char *default_server = "pool.ntp.org";
-const char *default_tzone = "CET-1CEST,M3.5.0,M10.5.0/3";
 
 bool wcli_setup_ready = false;
 
@@ -66,8 +62,8 @@ void alarmTriggered(const char *alarmName, const tm *timeinfo) {
 void testPump() { enablePump((char *)"120 15000", &Serial); }
 
 void updateTimeSettings() {
-  String server = wcli.getString(key_ntp_server, default_server);
-  String tzone = wcli.getString(key_tzone, default_tzone);
+  String server = wcli.getString(key_ntp_server, NTP_SERVER1);
+  String tzone = wcli.getString(key_tzone, DEFAULT_TZONE);
   Serial.printf("ntp server: \t%s\r\ntimezone: \t%s\r\n", server.c_str(), tzone.c_str());
   configTime(GMT_OFFSET_SEC, DAY_LIGHT_OFFSET_SEC, server.c_str(), NTP_SERVER2);
   setenv("TZ", tzone.c_str(), 1);
@@ -78,7 +74,7 @@ void setNTPServer(char *args, Stream *response) {
   Pair<String, String> operands = wcli.parseCommand(args);
   String server = operands.first();
   if (server.isEmpty()) {
-    Serial.println(wcli.getString(key_ntp_server, default_server));
+    Serial.println(wcli.getString(key_ntp_server, NTP_SERVER1));
     return;
   }
   wcli.setString(key_ntp_server, server);
@@ -89,7 +85,7 @@ void setTimeZone(char *args, Stream *response) {
   Pair<String, String> operands = wcli.parseCommand(args);
   String tzone = operands.first();
   if (tzone.isEmpty()) {
-    Serial.println(wcli.getString(key_tzone, default_tzone));
+    Serial.println(wcli.getString(key_tzone, DEFAULT_TZONE));
     return;
   }
   wcli.setString(key_tzone, tzone);
@@ -181,6 +177,19 @@ void addAlarm(char *args, Stream *response) {
   response->printf("Added alarm: %02d:%02d - %s\r\n", hour, minute, safeName);
 }
 
+void getADCVal(char *args, Stream *response) {
+  Pair<String, String> operands = wcli.parseCommand(args);
+  int pin = operands.first().toInt();
+  if (pin < 0 || pin > 39) {
+    response->println("Error: Invalid pin number (0-39)");
+    return;
+  }
+  int adcVal = analogRead(pin);
+  double voltage = adcVal / 4095.0 * 3.3;  //Convert to the voltage value at the detection point.
+  double battery = voltage * 4.0;          //There is only 1/4 battery voltage at the detection point.
+  response->printf("ADC Val: %d, \t Voltage: %.2fV, \t Battery: %.2fV\r\n", adcVal, voltage, battery);
+}
+
 void enableOTA() {
   ota.setup("basil_plant", "basil_plant");
   ota.setOnUpdateMessageCb([](const char *msg) { Serial.println(msg); });
@@ -216,6 +225,7 @@ void setup() {
   wcli.add("reboot", &reboot, "\tbasil plant reboot");
   wcli.add("pumptest", &enablePump, "\t<PWM> <time (ms)> enable pump servo");
   wcli.add("addalarm", &addAlarm, "\t<HH:MM> <Alarm Name> add alarm");
+  wcli.add("getADCVal", &getADCVal, "\t<PIN> get ADC voltage");
   wcli_setup_ready = wcli.isConfigured();
   wcli.begin("basil_plant");
   initRemoteShell();
@@ -241,4 +251,5 @@ void loop() {
     last_tick = millis();
   }
   wcli.loop();
+
 }
