@@ -177,6 +177,16 @@ void addAlarm(char *args, Stream *response) {
   response->printf("Added alarm: %02d:%02d - %s\r\n", hour, minute, safeName);
 }
 
+void checkAlarms() {
+  static uint32_t last_tick;
+  if (millis() - last_tick > 1000) {
+    struct tm timeinfo;
+    getLocalTime(&timeinfo);
+    alarmManager.checkAlarms(&timeinfo);
+    last_tick = millis();
+  }
+}
+
 void getADCVal(char *args, Stream *response) {
   Pair<String, String> operands = wcli.parseCommand(args);
   int pin = operands.first().toInt();
@@ -191,7 +201,7 @@ void getADCVal(char *args, Stream *response) {
 }
 
 void enableOTA() {
-  ota.setup("basil_plant", "basil_plant");
+  ota.setup(WiFi.getHostname(), "basil_plant");
   ota.setOnUpdateMessageCb([](const char *msg) { Serial.println(msg); });
 }
 
@@ -214,9 +224,9 @@ void setup() {
   alarmManager.setCallback(alarmTriggered);
 
   // Add example alarms (modify as needed)
-  alarmManager.addDailyAlarm(8, 0, "Morning wakeup");
-  alarmManager.addDailyAlarm(11, 0, "Morning watering");
-  alarmManager.addDailyAlarm(23, 17, "Night shutdown");
+  // alarmManager.addDailyAlarm(8, 0, "Morning wakeup");
+  // alarmManager.addDailyAlarm(11, 0, "Morning watering");
+  // alarmManager.addDailyAlarm(23, 17, "Night shutdown");
 
   // CLI config
   wcli.add("ntpserver", &setNTPServer, "\tset NTP server. Default: pool.ntp.org");
@@ -240,16 +250,9 @@ void setup() {
 }
 
 void loop() {
-  ota.loop();
-  button1.tick();
-  delay(3);
-  static uint32_t last_tick;
-  if (millis() - last_tick > 1000) {
-    struct tm timeinfo;
-    getLocalTime(&timeinfo);
-    alarmManager.checkAlarms(&timeinfo);
-    last_tick = millis();
-  }
   wcli.loop();
-
+  button1.tick();
+  if (!wcli_setup_ready) return; // Only run services if the WiFi setup is ready
+  ota.loop();
+  checkAlarms(); 
 }
