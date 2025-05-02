@@ -252,7 +252,7 @@ void setup() {
 void loop() {
   wcli.loop();
   button1.tick();
-  if (!wcli_setup_ready) return; // Only run services if the WiFi setup is ready
+  if (!wcli_setup_ready) return; // Only run services if WiFi setup is ready
   ota.loop();
   checkAlarms(); 
 }
