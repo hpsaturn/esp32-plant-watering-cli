@@ -8,13 +8,13 @@
  * @license GPL3
  */
 
+#include <Arduino.h>
 #include <ESP32Servo.h>
 #include <ESP32WifiCLI.hpp>
+#include <EasyPreferences.hpp> 
 #include <OTAHandler.h>
 
-#include "Arduino.h"
 #include "OneButton.h"
-#include "WiFi.h"
 #include "alarm_manager.h"
 #include "esp_sntp.h"
 #include "logo.h"
@@ -215,6 +215,8 @@ void setup() {
   Serial.begin(115200);
   button1.attachClick([]() { testPump(); });
 
+  cfg.init("basil_plant");
+  
   wcli.setCallback(new mESP32WifiCLICallbacks());
   wcli.shell->attachLogo(logo);
   wcli.setSilentMode(true);
