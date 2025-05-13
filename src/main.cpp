@@ -8,7 +8,6 @@
  * @license GPL3
  */
 
-#include <Arduino.h>
 #include <ESP32Servo.h>
 #include <ESP32WifiCLI.hpp>
 #include <EasyPreferences.hpp> 
