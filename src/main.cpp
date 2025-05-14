@@ -10,11 +10,10 @@
 
 #include <ESP32Servo.h>
 #include <ESP32WifiCLI.hpp>
+#include <EasyPreferences.hpp> 
 #include <OTAHandler.h>
 
-#include "Arduino.h"
 #include "OneButton.h"
-#include "WiFi.h"
 #include "alarm_manager.h"
 #include "esp_sntp.h"
 #include "logo.h"
@@ -56,7 +55,7 @@ void enablePump(char *args, Stream *response) {
 void alarmTriggered(const char *alarmName, const tm *timeinfo) {
   Serial.printf("\r\nALARM TRIGGERED [%02d:%02d]: %s\r\n", timeinfo->tm_hour, timeinfo->tm_min,
                 alarmName);
-  enablePump((char *)"120 15000", &Serial);  // enable pump for 15 second
+  enablePump((char *)"250 30000", &Serial);  // enable pump for 15 second
 }
 
 void testPump() { enablePump((char *)"120 15000", &Serial); }
@@ -174,7 +173,25 @@ void addAlarm(char *args, Stream *response) {
   safeName[copyLength] = '\0';  // Ensure null-termination
 
   alarmManager.addDailyAlarm(hour, minute, safeName);
+  alarmManager.saveAlarms();  // Save to preferences
   response->printf("Added alarm: %02d:%02d - %s\r\n", hour, minute, safeName);
+}
+
+void dropAlarm(char *args, Stream *response) {
+  Pair<String, String> operands = wcli.parseCommand(args);
+  String name = operands.first();
+
+  if (name.isEmpty()) {
+    response->println("Usage: dropalarm Alarm Name");
+    return;
+  }
+
+  if (alarmManager.deleteAlarmByName(name.c_str())) {
+    alarmManager.saveAlarms();  // Save to preferences
+    response->printf("Removed alarm: %s\r\n", name.c_str());
+  } else {
+    response->printf("No alarm found with name: %s\r\n", name.c_str());
+  }
 }
 
 void checkAlarms() {
@@ -215,6 +232,8 @@ void setup() {
   Serial.begin(115200);
   button1.attachClick([]() { testPump(); });
 
+  cfg.init("basil_plant");
+  
   wcli.setCallback(new mESP32WifiCLICallbacks());
   wcli.shell->attachLogo(logo);
   wcli.setSilentMode(true);
@@ -222,12 +241,7 @@ void setup() {
   updateTimeSettings();
   // Initialize alarm callback
   alarmManager.setCallback(alarmTriggered);
-
-  // Add example alarms (modify as needed)
-  // alarmManager.addDailyAlarm(8, 0, "Morning wakeup");
-  // alarmManager.addDailyAlarm(11, 0, "Morning watering");
-  // alarmManager.addDailyAlarm(23, 17, "Night shutdown");
-
+  alarmManager.loadAlarms();
   // CLI config
   wcli.add("ntpserver", &setNTPServer, "\tset NTP server. Default: pool.ntp.org");
   wcli.add("ntpzone", &setTimeZone, "\tset TZONE. https://tinyurl.com/4s44uyzn");
@@ -235,6 +249,7 @@ void setup() {
   wcli.add("reboot", &reboot, "\tbasil plant reboot");
   wcli.add("pumptest", &enablePump, "\t<PWM> <time (ms)> enable pump servo");
   wcli.add("addalarm", &addAlarm, "\t<HH:MM> <Alarm Name> add alarm");
+  wcli.add("dropalarm", &dropAlarm, "\t<Alarm Name> remove alarm");
   wcli.add("getADCVal", &getADCVal, "\t<PIN> get ADC voltage");
   wcli_setup_ready = wcli.isConfigured();
   wcli.begin("basil_plant");
