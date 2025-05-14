@@ -73,6 +73,21 @@ class AlarmManager {
     }
   }
 
+  bool deleteAlarmByName(const char* targetName) {
+    if (!targetName) return false;
+
+    auto newEnd = std::remove_if(alarms.begin(), alarms.end(),
+      [targetName](const Alarm& alarm) {
+        if (!alarm.name) return false;
+        return strcmp(alarm.name, targetName) == 0;
+      });
+
+    bool removed = (newEnd != alarms.end());
+    alarms.erase(newEnd, alarms.end());
+    
+    return removed;
+  }
+
   void saveAlarms() {
     Preferences prefs;
     prefs.begin("alarm_manager", false);

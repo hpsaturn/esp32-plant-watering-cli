@@ -177,6 +177,23 @@ void addAlarm(char *args, Stream *response) {
   response->printf("Added alarm: %02d:%02d - %s\r\n", hour, minute, safeName);
 }
 
+void dropAlarm(char *args, Stream *response) {
+  Pair<String, String> operands = wcli.parseCommand(args);
+  String name = operands.first();
+
+  if (name.isEmpty()) {
+    response->println("Usage: dropalarm Alarm Name");
+    return;
+  }
+
+  if (alarmManager.deleteAlarmByName(name.c_str())) {
+    alarmManager.saveAlarms();  // Save to preferences
+    response->printf("Removed alarm: %s\r\n", name.c_str());
+  } else {
+    response->printf("No alarm found with name: %s\r\n", name.c_str());
+  }
+}
+
 void checkAlarms() {
   static uint32_t last_tick;
   if (millis() - last_tick > 1000) {
@@ -232,6 +249,7 @@ void setup() {
   wcli.add("reboot", &reboot, "\tbasil plant reboot");
   wcli.add("pumptest", &enablePump, "\t<PWM> <time (ms)> enable pump servo");
   wcli.add("addalarm", &addAlarm, "\t<HH:MM> <Alarm Name> add alarm");
+  wcli.add("dropalarm", &dropAlarm, "\t<Alarm Name> remove alarm");
   wcli.add("getADCVal", &getADCVal, "\t<PIN> get ADC voltage");
   wcli_setup_ready = wcli.isConfigured();
   wcli.begin("basil_plant");
