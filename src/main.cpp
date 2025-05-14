@@ -55,7 +55,7 @@ void enablePump(char *args, Stream *response) {
 void alarmTriggered(const char *alarmName, const tm *timeinfo) {
   Serial.printf("\r\nALARM TRIGGERED [%02d:%02d]: %s\r\n", timeinfo->tm_hour, timeinfo->tm_min,
                 alarmName);
-  enablePump((char *)"120 15000", &Serial);  // enable pump for 15 second
+  enablePump((char *)"250 30000", &Serial);  // enable pump for 15 second
 }
 
 void testPump() { enablePump((char *)"120 15000", &Serial); }
@@ -173,6 +173,7 @@ void addAlarm(char *args, Stream *response) {
   safeName[copyLength] = '\0';  // Ensure null-termination
 
   alarmManager.addDailyAlarm(hour, minute, safeName);
+  alarmManager.saveAlarms();  // Save to preferences
   response->printf("Added alarm: %02d:%02d - %s\r\n", hour, minute, safeName);
 }
 
@@ -223,12 +224,7 @@ void setup() {
   updateTimeSettings();
   // Initialize alarm callback
   alarmManager.setCallback(alarmTriggered);
-
-  // Add example alarms (modify as needed)
-  // alarmManager.addDailyAlarm(8, 0, "Morning wakeup");
-  // alarmManager.addDailyAlarm(11, 0, "Morning watering");
-  // alarmManager.addDailyAlarm(23, 17, "Night shutdown");
-
+  alarmManager.loadAlarms();
   // CLI config
   wcli.add("ntpserver", &setNTPServer, "\tset NTP server. Default: pool.ntp.org");
   wcli.add("ntpzone", &setTimeZone, "\tset TZONE. https://tinyurl.com/4s44uyzn");
