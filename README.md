@@ -14,7 +14,7 @@ Scheduler and pump driver using a basic command line over an ESP32, for now.
 - [x] OTA support
 - [x] Moisture sensor v1.2 test
 - [x] ESP32/ESP32S3 supported via OTA
-- [x] Persist scheduler on flash (add/remove)
+- [x] Persistence scheduler on flash (add/remove)
 - [ ] Set motor and moisture pins via CLI
 - [ ] Moisture sensor via Bluetooth LE connection
 - [ ] Auto plant watering mode
@@ -40,6 +40,7 @@ End    : Jumps the cursor to the end of the line.
 ---- Available commands ----
 
 addalarm: 	<HH:MM> <Alarm Name> add alarm
+dropalarm:	<Alarm Name> remove alarm
 nmcli: 		network manager CLI. Type nmcli help for more info
 ntpserver: 	set NTP server. Default: pool.ntp.org
 ntpzone: 	set TZONE. https://tinyurl.com/4s44uyzn
