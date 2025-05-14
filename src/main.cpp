@@ -180,6 +180,11 @@ void addAlarm(char *args, Stream *response) {
 void dropAlarm(char *args, Stream *response) {
   Pair<String, String> operands = wcli.parseCommand(args);
   String name = operands.first();
+  String second = operands.second();
+
+  if (!second.isEmpty()) {
+    name = name + " " + second;
+  }
 
   if (name.isEmpty()) {
     response->println("Usage: dropalarm Alarm Name");
