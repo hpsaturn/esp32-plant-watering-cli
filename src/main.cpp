@@ -20,6 +20,8 @@
 #include "app_config.h"
 #include "power.h"
 
+// #define PUMP_TYPE_SERVO 1
+
 // Global alarm manager instance
 AlarmManager alarmManager;
 
@@ -30,9 +32,12 @@ const char *key_tzone = "ktzone";
 
 bool wcli_setup_ready = false;
 
-Servo pumpServo;
-int servoPin = GPIO_NUM_21;
+Servo pumpServo1, pumpServo2;
 
+/**
+ * @brief Callback class for ESP32WifiCLI
+ * @details This class handles the WiFi status and command line interface (CLI) events.
+ */
 class mESP32WifiCLICallbacks : public ESP32WifiCLICallbacks {
   void onWifiStatus(bool isConnected) {}
   void onHelpShow() {}
@@ -44,22 +49,47 @@ void enablePump(char *args, Stream *response) {
   String angle = operands.first();
   String time = operands.second();
   response->printf("Pump enabled for %s PWM for %s ms\r\n", angle.c_str(), time.c_str());
-  pumpServo.attach(servoPin);
-  pumpServo.write(angle.toInt());
-  delay(time.toDouble());
-  pumpServo.write(10);
-  pumpServo.detach();
+
+  // TODO: migrate it to class object
+  #ifdef PUMP_TYPE_SERVO
+  pumpServo1.attach(PIN_PUMP_1);
+  pumpServo2.attach(PIN_PUMP_2);
+  pumpServo1.write(angle.toInt());
+  pumpServo2.write(angle.toInt());
+  delay(time.toDouble());  // TODO: migrate it to task (not blocking)
+  pumpServo1.write(PUMP_ANGLE_STOP);
+  pumpServo2.write(PUMP_ANGLE_STOP);
+  pumpServo1.detach();
+  pumpServo2.detach();
+  #else
+  digitalWrite(PIN_PUMP_1, HIGH);
+  digitalWrite(PIN_PUMP_2, HIGH);
+  delay(time.toDouble());  // TODO: migrate it to task (not blocking)
+  digitalWrite(PIN_PUMP_1, LOW);
+  digitalWrite(PIN_PUMP_2, LOW); 
+  #endif
 }
 
-// Alarm callback function
+/**
+ * @brief Callback function for alarm triggered event
+ * @param alarmName Name of the triggered alarm
+ * @param timeinfo Pointer to the tm structure containing the current time
+ */
 void alarmTriggered(const char *alarmName, const tm *timeinfo) {
   Serial.printf("\r\nALARM TRIGGERED [%02d:%02d]: %s\r\n", timeinfo->tm_hour, timeinfo->tm_min,
                 alarmName);
   enablePump((char *)"250 30000", &Serial);  // enable pump for 15 second
 }
 
+/**
+ * @brief test the pump
+ */
 void testPump() { enablePump((char *)"120 15000", &Serial); }
 
+/**
+ * @brief update the time settings
+ * @details This function configures the NTP server and timezone settings.
+ */
 void updateTimeSettings() {
   String server = wcli.getString(key_ntp_server, NTP_SERVER1);
   String tzone = wcli.getString(key_tzone, DEFAULT_TZONE);
@@ -69,6 +99,12 @@ void updateTimeSettings() {
   tzset();
 }
 
+/**
+ * @brief set the NTP server
+ * @param args NTP server string
+ * @param response Stream to send response to Serial or Telnet console
+ * @details The command format is: ntpserver <server>
+ */
 void setNTPServer(char *args, Stream *response) {
   Pair<String, String> operands = wcli.parseCommand(args);
   String server = operands.first();
@@ -80,6 +116,12 @@ void setNTPServer(char *args, Stream *response) {
   updateTimeSettings();
 }
 
+/**
+ * @brief set the timezone for the NTP server
+ * @param args timezone string. Please refer to https://tinyurl.com/4s44uyzn
+ * @param response Stream to send response to Serial or Telnet console
+ * @details The command format is: ntpzone <timezone>
+ */
 void setTimeZone(char *args, Stream *response) {
   Pair<String, String> operands = wcli.parseCommand(args);
   String tzone = operands.first();
@@ -91,6 +133,11 @@ void setTimeZone(char *args, Stream *response) {
   updateTimeSettings();
 }
 
+/**
+ * @brief show the current local time and configured alarms
+ * @param args Command line arguments (not used)
+ * @param response Stream to send response to Serial or Telnet console
+ */
 void printLocalTime(char *args, Stream *response) {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) {
@@ -144,7 +191,12 @@ void printLocalTime(char *args, Stream *response) {
   response->println("----------------------------");
 }
 
-// Add new CLI command for alarm management
+/**
+ * @brief Add an alarm to the alarm manager
+ * @param args Command line arguments (HH:MM Alarm Name)
+ * @param response Stream to send response to Serial or Telnet console
+ * @details The command format is: addalarm HH:MM Alarm Name
+ */
 void addAlarm(char *args, Stream *response) {
   Pair<String, String> operands = wcli.parseCommand(args);
   String timeStr = operands.first();
@@ -177,6 +229,12 @@ void addAlarm(char *args, Stream *response) {
   response->printf("Added alarm: %02d:%02d - %s\r\n", hour, minute, safeName);
 }
 
+/**
+ * @brief Drop an alarm from the alarm manager
+ * @param args Command line arguments (Alarm Name)
+ * @param response Stream to send response to Serial or Telnet console
+ * @details The command format is: dropalarm Alarm Name
+ */
 void dropAlarm(char *args, Stream *response) {
   Pair<String, String> operands = wcli.parseCommand(args);
   String name = operands.first();
@@ -199,6 +257,10 @@ void dropAlarm(char *args, Stream *response) {
   }
 }
 
+/**
+ * @brief check for triggered alarms
+ * @details This function checks for triggered alarms every second.
+ */
 void checkAlarms() {
   static uint32_t last_tick;
   if (millis() - last_tick > 1000) {
@@ -209,6 +271,12 @@ void checkAlarms() {
   }
 }
 
+/**
+ * @brief get ADC value from a specified pin
+ * @param args Command line arguments (PIN)
+ * @param response Stream to send response to Serial or Telnet console
+ * @details The command format is: getADCVal PIN
+ */
 void getADCVal(char *args, Stream *response) {
   Pair<String, String> operands = wcli.parseCommand(args);
   int pin = operands.first().toInt();
@@ -267,6 +335,12 @@ void setup() {
   ESP32PWM::allocateTimer(1);
   ESP32PWM::allocateTimer(2);
   ESP32PWM::allocateTimer(3);
+
+  // Set up the pump servo
+  pinMode(PIN_PUMP_1, GPIO_MODE_OUTPUT);
+  pinMode(PIN_PUMP_2, GPIO_MODE_OUTPUT);
+  digitalWrite(PIN_PUMP_1, LOW);
+  digitalWrite(PIN_PUMP_2, LOW);
 }
 
 void loop() {
