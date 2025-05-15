@@ -16,3 +16,7 @@
 
 #define PIN_IIC_SCL 17
 #define PIN_IIC_SDA 18
+
+#define PIN_PUMP_1 21
+#define PIN_PUMP_2 47
+#define PUMP_ANGLE_STOP 10
