@@ -76,15 +76,19 @@ void enablePump(char *args, Stream *response) {
  * @param timeinfo Pointer to the tm structure containing the current time
  */
 void alarmTriggered(const char *alarmName, const tm *timeinfo) {
-  Serial.printf("\r\nALARM TRIGGERED [%02d:%02d]: %s\r\n", timeinfo->tm_hour, timeinfo->tm_min,
-                alarmName);
-  enablePump((char *)"250 30000", &Serial);  // enable pump for 15 second
+  Serial.printf("\r\nALARM TRIGGERED [%02d:%02d]: %s\r\n",
+    timeinfo->tm_hour,
+    timeinfo->tm_min,
+    alarmName
+  );
+  enablePump((char *)"250 300000", &Serial);  // enable pump for 5 minutes
 }
 
 /**
- * @brief test the pump
+ * @brief test the pump for 20 seconds
+ * @details This function is called when the button is pressed.
  */
-void testPump() { enablePump((char *)"120 15000", &Serial); }
+void testPump() { enablePump((char *)"120 20000", &Serial); }
 
 /**
  * @brief update the time settings
